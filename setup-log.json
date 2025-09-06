@@ -1,0 +1,9 @@
+{
+  "service_id": "feed-box-api",
+  "service_name": "Feed Box API",
+  "domain": "https://feed-box-api.noshado.ws",
+  "host": "localhost",
+  "port": "3115",
+  "author": "leo",
+  "created_on": "Sat 06 Sep 2025 07:55:21 PM EDT"
+}
