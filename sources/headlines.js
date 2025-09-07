@@ -1,4 +1,5 @@
 import { parseString } from "xml2js";
+import { formatDate, formatNow } from "../utils/dateFormatter.js";
 
 // Function to fetch and parse NYT RSS feed
 export async function fetchNYTHeadlines() {
@@ -34,33 +35,10 @@ export async function fetchNYTHeadlines() {
               if (pubDate) {
                 try {
                   const date = new Date(pubDate);
-                  articleDateTime =
-                    date.toLocaleDateString("en-US", {
-                      month: "2-digit",
-                      day: "2-digit",
-                      year: "numeric"
-                    }) +
-                    " " +
-                    date.toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true
-                    });
+                  articleDateTime = formatDate(date);
                 } catch (error) {
                   // Fallback to current date if parsing fails
-                  const now = new Date();
-                  articleDateTime =
-                    now.toLocaleDateString("en-US", {
-                      month: "2-digit",
-                      day: "2-digit",
-                      year: "numeric"
-                    }) +
-                    " " +
-                    now.toLocaleTimeString("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                      hour12: true
-                    });
+                  articleDateTime = formatNow();
                 }
               }
 

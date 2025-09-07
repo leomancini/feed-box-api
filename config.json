@@ -12,5 +12,6 @@
       "wikipedia": 60,
       "nasa": 30
     }
-  }
+  },
+  "timezone": "America/New_York"
 }

@@ -1,5 +1,7 @@
 // Fetch Wikipedia featured article data and return concise strings for display
 
+import { formatDate } from "../utils/dateFormatter.js";
+
 /**
  * Fetch Wikipedia featured content for a given type and format as strings
  * Currently supports "today-featured-article" via Wikipedia's featured feed API.
@@ -63,12 +65,8 @@ function formatFeaturedArticle(tfa, articleDate) {
     const title = cleanHtmlAndEntities(rawTitle);
     const extract = tfa.extract || "";
 
-    // Format the article date
-    const articleDateTime = articleDate.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric"
-    });
+    // Format the article date (date only, no time)
+    const articleDateTime = formatDate(articleDate, { includeTime: false });
 
     const lines = [];
 

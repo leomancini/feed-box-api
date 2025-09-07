@@ -1,5 +1,7 @@
 // Fetch ESPN scoreboard data and return concise strings for display
 
+import { formatDate, formatNow } from "../utils/dateFormatter.js";
+
 /**
  * Fetch scoreboard data for a given league and format as strings
  * Currently supports MLB via ESPN public API.
@@ -24,19 +26,7 @@ export async function fetchSportsScoreboard(league = "mlb") {
 
     // Fallback if no events
     if (lines.length === 0) {
-      const now = new Date();
-      const currentDateTime =
-        now.toLocaleDateString("en-US", {
-          month: "2-digit",
-          day: "2-digit",
-          year: "numeric"
-        }) +
-        " " +
-        now.toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit",
-          hour12: true
-        });
+      const currentDateTime = formatNow();
       return [`${currentDateTime} - ${label} - No games found`];
     }
 
@@ -63,18 +53,7 @@ function formatEventLine(event) {
 
     // Use event date instead of current date
     const eventDate = event?.date ? new Date(event.date) : new Date();
-    const eventDateTime =
-      eventDate.toLocaleDateString("en-US", {
-        month: "2-digit",
-        day: "2-digit",
-        year: "numeric"
-      }) +
-      " " +
-      eventDate.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true
-      });
+    const eventDateTime = formatDate(eventDate);
 
     // Extract scores and team details if present
     const comp = Array.isArray(event?.competitions)
