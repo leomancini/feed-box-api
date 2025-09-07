@@ -1,5 +1,3 @@
-// Generic screen formatting utilities for converting strings into display screens
-
 /**
  * Calculate display duration based on character count
  * Formula: Base time + time per character
