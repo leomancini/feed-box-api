@@ -6,6 +6,7 @@ import { fetchNYTHeadlines } from "./sources/headlines.js";
 import { sampleStrings } from "./sources/samples.js";
 import { fetchSportsScoreboard } from "./sources/sports.js";
 import { fetchWikipediaContent } from "./sources/wikipedia.js";
+import { fetchNASANews } from "./sources/nasa.js";
 
 // Load configuration from JSON file
 let config;
@@ -36,7 +37,8 @@ const sourceHandlers = {
   wikipedia: async (req) => {
     const type = (req.query.type || "today-featured-article").toLowerCase();
     return await fetchWikipediaContent(type);
-  }
+  },
+  nasa: async () => await fetchNASANews()
 };
 
 // Function to get TTL for a specific source (converts minutes to milliseconds)

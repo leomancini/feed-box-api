@@ -28,7 +28,9 @@ export async function fetchWikipediaContent(type = "today-featured-article") {
     let lines = [];
 
     if (type === "today-featured-article" && data.tfa) {
-      lines = formatFeaturedArticle(data.tfa);
+      // Create the article date from the URL parameters (the featured date)
+      const articleDate = new Date(year, month - 1, day);
+      lines = formatFeaturedArticle(data.tfa, articleDate);
     }
 
     // Fallback if no content
@@ -54,18 +56,24 @@ function resolveContentType(type) {
   }
 }
 
-function formatFeaturedArticle(tfa) {
+function formatFeaturedArticle(tfa, articleDate) {
   try {
     const rawTitle = tfa.displaytitle || tfa.title || "Unknown Article";
     // Clean HTML tags and entities from title
     const title = cleanHtmlAndEntities(rawTitle);
     const extract = tfa.extract || "";
-    const description = tfa.description || "";
+
+    // Format the article date
+    const articleDateTime = articleDate.toLocaleDateString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric"
+    });
 
     const lines = [];
 
-    // Add title
-    lines.push(`Today's Featured Wikipedia Article: ${title}`);
+    // Add title with single date
+    lines.push(`${articleDateTime} - Featured Wikipedia Article: ${title}`);
 
     // Split the extract into smaller chunks for better display
     if (extract) {

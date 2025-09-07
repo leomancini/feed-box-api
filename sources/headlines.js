@@ -23,23 +23,47 @@ export async function fetchNYTHeadlines() {
         try {
           // Extract headlines from RSS feed
           const items = result.rss?.channel?.[0]?.item || [];
-          const now = new Date();
-          const currentDateTime =
-            now.toLocaleDateString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "numeric"
-            }) +
-            " " +
-            now.toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true
-            });
 
           const headlines = items
             .map((item) => {
               const title = item.title?.[0] || "";
+              const pubDate = item.pubDate?.[0] || "";
+
+              // Parse the publication date and format it
+              let articleDateTime = "";
+              if (pubDate) {
+                try {
+                  const date = new Date(pubDate);
+                  articleDateTime =
+                    date.toLocaleDateString("en-US", {
+                      month: "2-digit",
+                      day: "2-digit",
+                      year: "numeric"
+                    }) +
+                    " " +
+                    date.toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true
+                    });
+                } catch (error) {
+                  // Fallback to current date if parsing fails
+                  const now = new Date();
+                  articleDateTime =
+                    now.toLocaleDateString("en-US", {
+                      month: "2-digit",
+                      day: "2-digit",
+                      year: "numeric"
+                    }) +
+                    " " +
+                    now.toLocaleTimeString("en-US", {
+                      hour: "numeric",
+                      minute: "2-digit",
+                      hour12: true
+                    });
+                }
+              }
+
               // Clean up any HTML entities or extra whitespace
               const cleanTitle = title
                 .replace(/&amp;/g, "&")
@@ -50,9 +74,12 @@ export async function fetchNYTHeadlines() {
                 .trim();
 
               // Add date/time prefix to each headline
-              return `${currentDateTime} - ${cleanTitle}`;
+              if (cleanTitle && articleDateTime) {
+                return `${articleDateTime} - ${cleanTitle}`;
+              }
+              return null;
             })
-            .filter((headline) => headline.length > 0);
+            .filter((headline) => headline && headline.length > 0);
 
           resolve(headlines);
         } catch (parseError) {

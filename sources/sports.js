@@ -20,26 +20,23 @@ export async function fetchSportsScoreboard(league = "mlb") {
     const data = await response.json();
     const events = Array.isArray(data?.events) ? data.events : [];
 
-    const now = new Date();
-    const currentDateTime =
-      now.toLocaleDateString("en-US", {
-        month: "2-digit",
-        day: "2-digit",
-        year: "numeric"
-      }) +
-      " " +
-      now.toLocaleTimeString("en-US", {
-        hour: "numeric",
-        minute: "2-digit",
-        hour12: true
-      });
-
-    const lines = events
-      .map((event) => formatEventLine(event, currentDateTime))
-      .filter(Boolean);
+    const lines = events.map((event) => formatEventLine(event)).filter(Boolean);
 
     // Fallback if no events
     if (lines.length === 0) {
+      const now = new Date();
+      const currentDateTime =
+        now.toLocaleDateString("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric"
+        }) +
+        " " +
+        now.toLocaleTimeString("en-US", {
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true
+        });
       return [`${currentDateTime} - ${label} - No games found`];
     }
 
@@ -58,7 +55,7 @@ function resolveLeaguePaths(league) {
   }
 }
 
-function formatEventLine(event, currentDateTime) {
+function formatEventLine(event) {
   try {
     const eventName = event?.name || ""; // e.g., "Toronto Blue Jays at New York Yankees"
     const status =
