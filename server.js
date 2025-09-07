@@ -130,19 +130,21 @@ app.get(
 
       res.json(screens);
     } catch (error) {
-      console.error(
-        `Error processing device ${req.params.serialNumber}:`,
-        error
-      );
-      const errorScreens = formatStringsToScreens(
-        [
-          `ERROR: Failed to process device ${req.params.serialNumber}`,
-          error?.message || "Unknown error"
-        ],
-        config.screens.maxCharacters,
-        config.screens.maxStrings
-      );
-      res.status(500).json(errorScreens);
+      if (!res.headersSent) {
+        console.error(
+          `Error processing device ${req.params.serialNumber}:`,
+          error
+        );
+        const errorScreens = formatStringsToScreens(
+          [
+            `ERROR: Failed to process device ${req.params.serialNumber}`,
+            error?.message || "Unknown error"
+          ],
+          config.screens.maxCharacters,
+          config.screens.maxStrings
+        );
+        res.status(500).json(errorScreens);
+      }
     }
   }
 );
