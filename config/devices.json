@@ -16,11 +16,6 @@
       "timezone": "America/Chicago"
     },
     {
-      "serialNumber": "A-694-382",
-      "source": "nasa",
-      "timezone": "UTC"
-    },
-    {
       "serialNumber": "A-419-753",
       "source": "sample",
       "timezone": "Europe/London"
