@@ -15,7 +15,7 @@ class AsyncCache extends EventEmitter {
 
     // File persistence options
     this.persistToFile = options.persistToFile !== false; // Default to true
-    this.cacheDir = options.cacheDir || path.join(process.cwd(), ".cache");
+    this.cacheDir = options.cacheDir || path.join(process.cwd(), "cache");
     this.fileWriteDebounce = options.fileWriteDebounce || 1000; // Debounce file writes
     this.pendingWrites = new Map(); // Track pending file writes
 
@@ -45,10 +45,19 @@ class AsyncCache extends EventEmitter {
 
   /**
    * Generate a safe filename from cache key
+   * Cache keys are strings: "device:A-531-329:source:headlines"
    */
   getFilePath(key) {
-    const hash = crypto.createHash("sha256").update(key).digest("hex");
-    return path.join(this.cacheDir, `${hash}.json`);
+    try {
+      const parsed = this.parseDeviceKey(key);
+      // Sanitize the device ID for filesystem (replace any unsafe characters)
+      const safeSerial = parsed.deviceId.replace(/[^a-zA-Z0-9\-_]/g, "_");
+      return path.join(this.cacheDir, `${safeSerial}.json`);
+    } catch (error) {
+      throw new Error(
+        `Invalid cache key format: ${key}. Expected format: device:SERIAL:source:SOURCE`
+      );
+    }
   }
 
   /**
@@ -144,11 +153,78 @@ class AsyncCache extends EventEmitter {
   }
 
   /**
-   * Generate a cache key from request parameters
+   * Generate a device-level cache key
+   * @param {string} serialNumber - Device serial number
+   * @param {string} source - Data source name
+   * @returns {string} Cache key string that can be used as Map key
    */
-  generateKey(req) {
-    const { path, query, body } = req;
-    return JSON.stringify({ path, query, body });
+  generateDeviceKey(serialNumber, source) {
+    // Create a consistent string key from the device and source
+    return `device:${serialNumber}:source:${source}`;
+  }
+
+  /**
+   * Parse a device cache key back into components
+   * @param {string} key - Cache key string
+   * @returns {Object} Parsed key with deviceId and source
+   */
+  parseDeviceKey(key) {
+    const parts = key.split(":");
+    if (parts.length === 4 && parts[0] === "device" && parts[2] === "source") {
+      return {
+        deviceId: parts[1],
+        source: parts[3]
+      };
+    }
+    throw new Error(`Invalid device key format: ${key}`);
+  }
+
+  /**
+   * Invalidate all cache entries for a specific device
+   */
+  async invalidateDevice(serialNumber) {
+    const keysToDelete = [];
+
+    // Find all cache keys for this device (keys are strings like "device:A-123:source:headlines")
+    for (const key of this.cache.keys()) {
+      if (key.startsWith(`device:${serialNumber}:`)) {
+        keysToDelete.push(key);
+      }
+    }
+
+    // Delete the cache entries from memory
+    let deletedCount = 0;
+    for (const key of keysToDelete) {
+      this.cache.delete(key);
+      deletedCount++;
+      const parsed = this.parseDeviceKey(key);
+      console.log(
+        `Removed from memory cache: deviceId=${parsed.deviceId}, source=${parsed.source}`
+      );
+    }
+
+    // Delete the device cache file (all sources for this device are in one file)
+    let filesDeleted = 0;
+    try {
+      const safeSerial = serialNumber.replace(/[^a-zA-Z0-9\-_]/g, "_");
+      const deviceFilePath = path.join(this.cacheDir, `${safeSerial}.json`);
+      await fs.unlink(deviceFilePath);
+      console.log(`Deleted device cache file: ${deviceFilePath}`);
+      filesDeleted = 1;
+    } catch (error) {
+      // File might not exist, which is fine
+      if (error.code !== "ENOENT") {
+        console.error(
+          `Failed to delete device cache file for ${serialNumber}:`,
+          error.message
+        );
+      }
+    }
+
+    console.log(
+      `Invalidated ${deletedCount} cache entries and deleted ${filesDeleted} cache files for device ${serialNumber}`
+    );
+    return { entriesDeleted: deletedCount, filesDeleted };
   }
 
   /**
@@ -425,12 +501,16 @@ export const cache = new AsyncCache({
 export function createCacheMiddleware(options = {}) {
   const {
     ttl = cache.defaultTTL,
-    keyGenerator = (req) => cache.generateKey(req),
+    keyGenerator = null, // Now required - must provide device-level key
     shouldCache = () => true,
     onCacheHit = () => {},
     onCacheMiss = () => {},
     onError = (error) => console.error("Cache error:", error)
   } = options;
+
+  if (!keyGenerator) {
+    throw new Error("keyGenerator is required for device-level caching");
+  }
 
   return function cacheMiddleware(req, res, next) {
     // Skip caching for non-GET requests by default

@@ -1,0 +1,29 @@
+{
+  "devices": [
+    {
+      "serialNumber": "A-531-329",
+      "source": "headlines",
+      "timezone": "America/New_York"
+    },
+    {
+      "serialNumber": "A-293-067",
+      "source": "sports",
+      "timezone": "America/Los_Angeles"
+    },
+    {
+      "serialNumber": "A-847-265",
+      "source": "wikipedia",
+      "timezone": "America/Chicago"
+    },
+    {
+      "serialNumber": "A-694-382",
+      "source": "nasa",
+      "timezone": "UTC"
+    },
+    {
+      "serialNumber": "A-419-753",
+      "source": "sample",
+      "timezone": "Europe/London"
+    }
+  ]
+}

@@ -2,7 +2,7 @@ import { parseString } from "xml2js";
 import { formatDate, formatNow } from "../utils/dateFormatter.js";
 
 // Function to fetch and parse NYT RSS feed
-export async function fetchNYTHeadlines() {
+export async function fetchNYTHeadlines(req = {}) {
   try {
     const response = await fetch(
       "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
@@ -35,10 +35,16 @@ export async function fetchNYTHeadlines() {
               if (pubDate) {
                 try {
                   const date = new Date(pubDate);
-                  articleDateTime = formatDate(date);
+                  const formatOptions = req.deviceTimezone
+                    ? { timezone: req.deviceTimezone }
+                    : {};
+                  articleDateTime = formatDate(date, formatOptions);
                 } catch (error) {
                   // Fallback to current date if parsing fails
-                  articleDateTime = formatNow();
+                  const formatOptions = req.deviceTimezone
+                    ? { timezone: req.deviceTimezone }
+                    : {};
+                  articleDateTime = formatNow(formatOptions);
                 }
               }
 

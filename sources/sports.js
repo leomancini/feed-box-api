@@ -8,7 +8,7 @@ import { formatDate, formatNow } from "../utils/dateFormatter.js";
  * @param {string} league - League identifier, e.g., "mlb"
  * @returns {Promise<string[]>}
  */
-export async function fetchSportsScoreboard(league = "mlb") {
+export async function fetchSportsScoreboard(league = "mlb", req = {}) {
   const { sportPath, leaguePath, label } = resolveLeaguePaths(league);
 
   const url = `https://site.api.espn.com/apis/site/v2/sports/${sportPath}/${leaguePath}/scoreboard`;
@@ -22,11 +22,16 @@ export async function fetchSportsScoreboard(league = "mlb") {
     const data = await response.json();
     const events = Array.isArray(data?.events) ? data.events : [];
 
-    const lines = events.map((event) => formatEventLine(event)).filter(Boolean);
+    const lines = events
+      .map((event) => formatEventLine(event, req))
+      .filter(Boolean);
 
     // Fallback if no events
     if (lines.length === 0) {
-      const currentDateTime = formatNow();
+      const formatOptions = req.deviceTimezone
+        ? { timezone: req.deviceTimezone }
+        : {};
+      const currentDateTime = formatNow(formatOptions);
       return [`${currentDateTime} - ${label} - No games found`];
     }
 
@@ -45,7 +50,7 @@ function resolveLeaguePaths(league) {
   }
 }
 
-function formatEventLine(event) {
+function formatEventLine(event, req = {}) {
   try {
     const eventName = event?.name || ""; // e.g., "Toronto Blue Jays at New York Yankees"
     const status =
@@ -53,7 +58,10 @@ function formatEventLine(event) {
 
     // Use event date instead of current date
     const eventDate = event?.date ? new Date(event.date) : new Date();
-    const eventDateTime = formatDate(eventDate);
+    const formatOptions = req.deviceTimezone
+      ? { timezone: req.deviceTimezone }
+      : {};
+    const eventDateTime = formatDate(eventDate, formatOptions);
 
     // Extract scores and team details if present
     const comp = Array.isArray(event?.competitions)

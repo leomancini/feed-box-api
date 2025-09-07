@@ -2,7 +2,7 @@ import { parseString } from "xml2js";
 import { formatDate, formatNow } from "../utils/dateFormatter.js";
 
 // Function to fetch and parse NASA RSS feed
-export async function fetchNASANews() {
+export async function fetchNASANews(req = {}) {
   try {
     const response = await fetch("https://www.nasa.gov/news-release/feed/");
 
@@ -34,10 +34,16 @@ export async function fetchNASANews() {
               if (pubDate) {
                 try {
                   const date = new Date(pubDate);
-                  articleDateTime = formatDate(date);
+                  const formatOptions = req.deviceTimezone
+                    ? { timezone: req.deviceTimezone }
+                    : {};
+                  articleDateTime = formatDate(date, formatOptions);
                 } catch (error) {
                   // Fallback to current date if parsing fails
-                  articleDateTime = formatNow();
+                  const formatOptions = req.deviceTimezone
+                    ? { timezone: req.deviceTimezone }
+                    : {};
+                  articleDateTime = formatNow(formatOptions);
                 }
               }
 
