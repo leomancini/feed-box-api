@@ -1,5 +1,36 @@
 // Generic screen formatting utilities for converting strings into display screens
 
+/**
+ * Calculate display duration based on character count
+ * Formula: Base time + time per character
+ * @param {number} characterCount - Total characters in the screen
+ * @returns {number} Duration in seconds
+ */
+function calculateDisplayDuration(characterCount) {
+  const baseTime = 2; // Minimum 2 seconds for any screen
+  const timePerCharacter = 0.1; // 100ms per character
+  const maxTime = 10; // Maximum 10 seconds per screen
+
+  const calculatedTime = baseTime + characterCount * timePerCharacter;
+  return Math.min(Math.max(calculatedTime, baseTime), maxTime);
+}
+
+/**
+ * Convert a screen array to a screen object with metadata
+ * @param {string[]} screenArray - Array of 4 strings representing the screen
+ * @returns {object} Screen object with content and metadata
+ */
+function createScreenObject(screenArray) {
+  const content = screenArray;
+  const totalCharacters = screenArray.join("").length;
+  const displayDuration = calculateDisplayDuration(totalCharacters);
+
+  return {
+    c: content,
+    s: Math.round(displayDuration)
+  };
+}
+
 // Generic function to format any array of strings into screens
 export function formatStringsToScreens(
   strings,
@@ -7,7 +38,7 @@ export function formatStringsToScreens(
   maxStrings = null
 ) {
   if (!strings || strings.length === 0) {
-    return [["", "", "", ""]];
+    return [createScreenObject(["", "", "", ""])];
   }
 
   // Limit the number of strings to process if specified
@@ -15,7 +46,9 @@ export function formatStringsToScreens(
 
   if (!maxCharacters) {
     // No character limit, return strings as single-line screens
-    return stringsToProcess.map((str) => [str || "", "", "", ""]);
+    return stringsToProcess.map((str) =>
+      createScreenObject([str || "", "", "", ""])
+    );
   }
 
   // Convert each string into screen objects
@@ -23,12 +56,15 @@ export function formatStringsToScreens(
 
   for (const str of stringsToProcess) {
     if (!str) {
-      allScreens.push(["", "", "", ""]);
+      allScreens.push(createScreenObject(["", "", "", ""]));
       continue;
     }
 
     const stringScreens = createScreensForString(str, maxCharacters);
-    allScreens.push(...stringScreens);
+    // Convert each screen array to screen object
+    allScreens.push(
+      ...stringScreens.map((screenArray) => createScreenObject(screenArray))
+    );
   }
 
   return allScreens;
