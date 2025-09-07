@@ -3,6 +3,7 @@ import { formatStringsToScreens } from "./utils/formatStringsToScreens.js";
 import { createCacheMiddleware } from "./utils/cache.js";
 import { fetchNYTHeadlines } from "./sources/headlines.js";
 import { sampleStrings } from "./sources/samples.js";
+import { fetchSportsScoreboard } from "./sources/sports.js";
 
 const app = express();
 const port = 3115;
@@ -25,7 +26,11 @@ const cacheMiddleware = createCacheMiddleware({
 
 const sourceHandlers = {
   sample: async () => sampleStrings,
-  headlines: async () => await fetchNYTHeadlines()
+  headlines: async () => await fetchNYTHeadlines(),
+  sports: async (req) => {
+    const league = (req.query.league || "mlb").toLowerCase();
+    return await fetchSportsScoreboard(league);
+  }
 };
 
 app.get(
@@ -52,7 +57,7 @@ app.get(
         return res.status(400).json(errorScreens);
       }
 
-      const sourceData = await sourceHandlers[source]();
+      const sourceData = await sourceHandlers[source](req);
 
       const screens = formatStringsToScreens(
         sourceData,
