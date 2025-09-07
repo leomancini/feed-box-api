@@ -5,6 +5,7 @@ import { createCacheMiddleware } from "./utils/cache.js";
 import { fetchNYTHeadlines } from "./sources/headlines.js";
 import { sampleStrings } from "./sources/samples.js";
 import { fetchSportsScoreboard } from "./sources/sports.js";
+import { fetchWikipediaContent } from "./sources/wikipedia.js";
 
 // Load configuration from JSON file
 let config;
@@ -31,6 +32,10 @@ const sourceHandlers = {
   sports: async (req) => {
     const league = (req.query.league || "mlb").toLowerCase();
     return await fetchSportsScoreboard(league);
+  },
+  wikipedia: async (req) => {
+    const type = (req.query.type || "today-featured-article").toLowerCase();
+    return await fetchWikipediaContent(type);
   }
 };
 

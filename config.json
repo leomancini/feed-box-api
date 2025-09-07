@@ -8,7 +8,8 @@
       "default": 10,
       "sample": 5,
       "headlines": 15,
-      "sports": 2
+      "sports": 2,
+      "wikipedia": 60
     }
   }
 }
