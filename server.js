@@ -13,9 +13,9 @@ let config;
 try {
   const configData = await fs.readFile("config.json", "utf8");
   config = JSON.parse(configData);
-  console.log("Configuration loaded from config.json");
+  console.log("✅ Global config loaded");
 } catch (error) {
-  console.error("Failed to load config.json:", error.message);
+  console.error("❌ Failed to load global config:", error.message);
   console.error(
     "Server cannot start without configuration file. Please ensure config.json exists and is valid."
   );
@@ -54,10 +54,10 @@ async function loadDevicesConfig(force = false) {
     }
 
     lastDevicesCheck = Date.now();
-    console.log("Devices configuration loaded from devices.json");
+    console.log("✅ Devices config loaded");
     return devices;
   } catch (error) {
-    console.error("Failed to load devices.json:", error.message);
+    console.error("❌ Failed to load devices config:", error.message);
     if (!devices) {
       console.error(
         "Server cannot start without devices configuration file. Please ensure devices.json exists and is valid."
@@ -306,5 +306,5 @@ app.post("/admin/reload-devices", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
+  console.log(`✅ API started at port ${port}`);
 });
