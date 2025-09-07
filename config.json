@@ -1,0 +1,14 @@
+{
+  "screens": {
+    "maxCharacters": 20,
+    "maxStrings": 20
+  },
+  "cache": {
+    "refreshMinutes": {
+      "default": 10,
+      "sample": 5,
+      "headlines": 15,
+      "sports": 2
+    }
+  }
+}

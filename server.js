@@ -1,28 +1,29 @@
 import express from "express";
+import { promises as fs } from "fs";
 import { formatStringsToScreens } from "./utils/formatStringsToScreens.js";
 import { createCacheMiddleware } from "./utils/cache.js";
 import { fetchNYTHeadlines } from "./sources/headlines.js";
 import { sampleStrings } from "./sources/samples.js";
 import { fetchSportsScoreboard } from "./sources/sports.js";
 
+// Load configuration from JSON file
+let config;
+try {
+  const configData = await fs.readFile("config.json", "utf8");
+  config = JSON.parse(configData);
+  console.log("Configuration loaded from config.json");
+} catch (error) {
+  console.error("Failed to load config.json:", error.message);
+  console.error(
+    "Server cannot start without configuration file. Please ensure config.json exists and is valid."
+  );
+  process.exit(1);
+}
+
 const app = express();
 const port = 3115;
 
-const config = {
-  screens: {
-    maxCharacters: 20,
-    maxStrings: 20
-  },
-  cache: {
-    ttl: 10 * 60 * 1000
-  }
-};
-
 app.use(express.json());
-
-const cacheMiddleware = createCacheMiddleware({
-  ttl: config.cache.ttl
-});
 
 const sourceHandlers = {
   sample: async () => sampleStrings,
@@ -33,15 +34,28 @@ const sourceHandlers = {
   }
 };
 
+// Function to get TTL for a specific source (converts minutes to milliseconds)
+function getSourceTTL(source) {
+  const ttlMinutes =
+    config.cache.refreshMinutes[source] || config.cache.refreshMinutes.default;
+  return ttlMinutes * 60 * 1000; // Convert minutes to milliseconds
+}
+
 app.get(
   "/screens",
   (req, res, next) => {
     const noCache = req.query.noCache === "true";
+    const source = req.query.source || "sample";
 
     if (noCache) {
       next();
     } else {
-      cacheMiddleware(req, res, next);
+      // Create cache middleware with source-specific TTL
+      const sourceTTL = getSourceTTL(source);
+      const sourceCacheMiddleware = createCacheMiddleware({
+        ttl: sourceTTL
+      });
+      sourceCacheMiddleware(req, res, next);
     }
   },
   async (req, res) => {
