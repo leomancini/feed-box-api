@@ -68,10 +68,13 @@ passport.use(
           return done(null, user);
         } else {
           console.error("No email found in OAuth profile");
+          console.error("Full profile:", profile);
           return done(new Error("No email found in OAuth profile"), null);
         }
       } catch (error) {
         console.error("Google OAuth error:", error);
+        console.error("Error details:", error.message);
+        console.error("Error stack:", error.stack);
         return done(error, null);
       }
     }

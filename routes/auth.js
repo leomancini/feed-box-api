@@ -1,4 +1,5 @@
 import express from "express";
+import jwt from "jsonwebtoken";
 import passport, {
   generateToken,
   requireAuth,
@@ -11,10 +12,10 @@ const router = express.Router();
 // Google OAuth routes
 router.get(
   "/google",
-  passport.authenticate("google", { 
+  passport.authenticate("google", {
     scope: ["profile", "email"],
-    accessType: 'offline',
-    prompt: 'consent'
+    accessType: "offline",
+    prompt: "consent"
   })
 );
 
@@ -25,32 +26,70 @@ router.get(
     failureMessage: true
   }),
   (req, res) => {
+    console.log("OAuth callback triggered");
+    console.log("Request user:", req.user ? "User present" : "No user");
+    console.log("Request query:", req.query);
+    console.log("Request params:", req.params);
+
     try {
       if (req.user) {
+        console.log("User details:", {
+          id: req.user.id || req.user._id,
+          email: req.user.email,
+          name: req.user.name,
+          fullUser: req.user
+        });
+
+        // Verify JWT_SECRET exists
+        if (!process.env.JWT_SECRET) {
+          console.error("JWT_SECRET is not set in environment variables");
+          const frontendUrl = process.env.FRONTEND_URL;
+          return res.redirect(
+            `${frontendUrl}/auth/failure?error=jwt_secret_missing`
+          );
+        }
+
         // Create JWT token
-        const jwt = require("jsonwebtoken");
-        const token = jwt.sign(
-          {
-            userId: req.user.id || req.user._id,
-            email: req.user.email,
-            name: req.user.name
-          },
-          process.env.JWT_SECRET,
-          { expiresIn: "24h" }
-        );
+        const tokenPayload = {
+          userId: req.user.id || req.user._id,
+          email: req.user.email,
+          name: req.user.name
+        };
+
+        console.log("Creating JWT with payload:", tokenPayload);
+
+        const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+          expiresIn: "24h"
+        });
+
+        console.log("JWT token created successfully");
 
         // Redirect with token in URL
         const frontendUrl = process.env.FRONTEND_URL;
+        console.log(
+          "Redirecting to:",
+          `${frontendUrl}/auth/success?token=${token.substring(0, 20)}...`
+        );
         res.redirect(`${frontendUrl}/auth/success?token=${token}`);
       } else {
         console.error("OAuth callback: No user in request");
+        console.error("Request session:", req.session);
+        console.error(
+          "Request isAuthenticated:",
+          req.isAuthenticated ? req.isAuthenticated() : "N/A"
+        );
         const frontendUrl = process.env.FRONTEND_URL;
         res.redirect(`${frontendUrl}/auth/failure?error=no_user`);
       }
     } catch (error) {
       console.error("OAuth callback error:", error);
+      console.error("Error stack:", error.stack);
       const frontendUrl = process.env.FRONTEND_URL;
-      res.redirect(`${frontendUrl}/auth/failure?error=callback_error`);
+      res.redirect(
+        `${frontendUrl}/auth/failure?error=callback_error&details=${encodeURIComponent(
+          error.message
+        )}`
+      );
     }
   }
 );
@@ -226,6 +265,30 @@ router.get("/success", (req, res) => {
     instructions:
       "You are now logged in. Use the JWT token from your cookies to make authenticated requests."
   });
+});
+
+// Debug endpoint to test database connection
+router.get("/debug/db", async (req, res) => {
+  try {
+    console.log("Testing database connection...");
+    const User = (await import("../models/User.js")).default;
+    const userCount = await User.countDocuments();
+    console.log("Database connection successful, user count:", userCount);
+
+    res.json({
+      success: true,
+      message: "Database connection working",
+      userCount: userCount,
+      mongoUri: process.env.MONGODB_URI ? "Set" : "Not set"
+    });
+  } catch (error) {
+    console.error("Database test error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      mongoUri: process.env.MONGODB_URI ? "Set" : "Not set"
+    });
+  }
 });
 
 // OAuth failure page
