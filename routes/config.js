@@ -1,25 +1,6 @@
 import express from "express";
 import Config from "../models/Config.js";
-import { requireAuth, requireAdmin } from "../utils/auth.js";
-
-// JWT Middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-  
-  if (!token) {
-    return res.status(401).json({ authenticated: false, error: 'No token provided' });
-  }
-  
-  const jwt = require('jsonwebtoken');
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(401).json({ authenticated: false, error: 'Invalid token' });
-    }
-    req.user = user;
-    next();
-  });
-};
+import { requireAuth, requireAdmin, authenticateToken } from "../utils/auth.js";
 
 const router = express.Router();
 

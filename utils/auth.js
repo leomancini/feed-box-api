@@ -4,50 +4,72 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
 // Configure Google OAuth Strategy
+const callbackURL = process.env.API_BASE_URL
+  ? `${process.env.API_BASE_URL}/auth/google/callback`
+  : "/auth/google/callback";
+
+console.log("OAuth Configuration:", {
+  clientID: process.env.GOOGLE_CLIENT_ID ? "✓ Set" : "✗ Missing",
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET ? "✓ Set" : "✗ Missing",
+  callbackURL: callbackURL,
+  apiBaseUrl: process.env.API_BASE_URL,
+  environment: process.env.NODE_ENV
+});
+
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL:
-        process.env.GOOGLE_CALLBACK_URL ||
-        (process.env.API_BASE_URL
-          ? `${process.env.API_BASE_URL}/auth/google/callback`
-          : "/auth/google/callback")
+      callbackURL: callbackURL
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
+        console.log("OAuth Profile received:", {
+          id: profile.id,
+          email: profile.emails?.[0]?.value,
+          name: profile.displayName
+        });
+
         // Check if user already exists with this Google ID
         let user = await User.findByGoogleId(profile.id);
 
         if (user) {
           // Update last login
           await user.updateLastLogin();
+          console.log("Existing user logged in:", user.email);
           return done(null, user);
         }
 
         // Check if user exists with same email
-        user = await User.findByEmail(profile.emails[0].value);
+        if (profile.emails && profile.emails.length > 0) {
+          user = await User.findByEmail(profile.emails[0].value);
 
-        if (user) {
-          // Link Google account to existing user
-          user.googleId = profile.id;
-          user.picture = profile.photos[0]?.value;
-          await user.updateLastLogin();
+          if (user) {
+            // Link Google account to existing user
+            user.googleId = profile.id;
+            user.picture = profile.photos[0]?.value;
+            await user.updateLastLogin();
+            await user.save();
+            console.log("Linked Google account to existing user:", user.email);
+            return done(null, user);
+          }
+
+          // Create new user
+          user = new User({
+            googleId: profile.id,
+            email: profile.emails[0].value,
+            name: profile.displayName,
+            picture: profile.photos[0]?.value
+          });
+
           await user.save();
+          console.log("Created new user:", user.email);
           return done(null, user);
+        } else {
+          console.error("No email found in OAuth profile");
+          return done(new Error("No email found in OAuth profile"), null);
         }
-
-        // Create new user
-        user = new User({
-          googleId: profile.id,
-          email: profile.emails[0].value,
-          name: profile.displayName,
-          picture: profile.photos[0]?.value
-        });
-
-        await user.save();
-        return done(null, user);
       } catch (error) {
         console.error("Google OAuth error:", error);
         return done(error, null);
@@ -100,6 +122,28 @@ export const verifyToken = (req, res, next) => {
   } catch (error) {
     res.status(400).json({ error: "Invalid token." });
   }
+};
+
+// JWT authentication middleware (for new JWT-only flow)
+export const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ authenticated: false, error: "No token provided" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res
+        .status(401)
+        .json({ authenticated: false, error: "Invalid token" });
+    }
+    req.user = user;
+    next();
+  });
 };
 
 // Middleware to check if user is authenticated (either session or JWT)

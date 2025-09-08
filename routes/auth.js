@@ -1,57 +1,56 @@
 import express from "express";
-import passport, { generateToken, requireAuth } from "../utils/auth.js";
+import passport, {
+  generateToken,
+  requireAuth,
+  authenticateToken
+} from "../utils/auth.js";
 import User from "../models/User.js";
-
-// JWT Middleware
-const authenticateToken = (req, res, next) => {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
-  
-  if (!token) {
-    return res.status(401).json({ authenticated: false, error: 'No token provided' });
-  }
-  
-  const jwt = require('jsonwebtoken');
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(401).json({ authenticated: false, error: 'Invalid token' });
-    }
-    req.user = user;
-    next();
-  });
-};
 
 const router = express.Router();
 
 // Google OAuth routes
 router.get(
   "/google",
-  passport.authenticate("google", { scope: ["profile", "email"] })
+  passport.authenticate("google", { 
+    scope: ["profile", "email"],
+    accessType: 'offline',
+    prompt: 'consent'
+  })
 );
 
 router.get(
   "/google/callback",
-  passport.authenticate("google"),
+  passport.authenticate("google", {
+    failureRedirect: "/auth/failure",
+    failureMessage: true
+  }),
   (req, res) => {
-    if (req.user) {
-      // Create JWT token
-      const jwt = require('jsonwebtoken');
-      const token = jwt.sign(
-        { 
-          userId: req.user.id || req.user._id, 
-          email: req.user.email,
-          name: req.user.name 
-        },
-        process.env.JWT_SECRET, // Add this to environment variables
-        { expiresIn: '24h' } // Token expires in 24 hours
-      );
-      
-      // Redirect with token in URL
+    try {
+      if (req.user) {
+        // Create JWT token
+        const jwt = require("jsonwebtoken");
+        const token = jwt.sign(
+          {
+            userId: req.user.id || req.user._id,
+            email: req.user.email,
+            name: req.user.name
+          },
+          process.env.JWT_SECRET,
+          { expiresIn: "24h" }
+        );
+
+        // Redirect with token in URL
+        const frontendUrl = process.env.FRONTEND_URL;
+        res.redirect(`${frontendUrl}/auth/success?token=${token}`);
+      } else {
+        console.error("OAuth callback: No user in request");
+        const frontendUrl = process.env.FRONTEND_URL;
+        res.redirect(`${frontendUrl}/auth/failure?error=no_user`);
+      }
+    } catch (error) {
+      console.error("OAuth callback error:", error);
       const frontendUrl = process.env.FRONTEND_URL;
-      res.redirect(`${frontendUrl}/auth/success?token=${token}`);
-    } else {
-      const frontendUrl = process.env.FRONTEND_URL;
-      res.redirect(`${frontendUrl}/auth/failure?error=authentication_failed`);
+      res.redirect(`${frontendUrl}/auth/failure?error=callback_error`);
     }
   }
 );
@@ -133,13 +132,13 @@ router.put("/me", authenticateToken, async (req, res) => {
 router.post("/logout", authenticateToken, (req, res) => {
   // With JWT, logout is handled client-side by removing the token
   // Optionally, you can maintain a blacklist of tokens here
-  res.json({ success: true, message: 'Logged out successfully' });
+  res.json({ success: true, message: "Logged out successfully" });
 });
 
 // Check authentication status
 router.get("/status", authenticateToken, (req, res) => {
-  res.json({ 
-    authenticated: true, 
+  res.json({
+    authenticated: true,
     user: {
       id: req.user.userId,
       email: req.user.email,
