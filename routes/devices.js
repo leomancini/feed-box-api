@@ -11,7 +11,8 @@ import {
   requireAdmin,
   requireDeviceOwnership,
   optionalAuth,
-  authenticateToken
+  authenticateToken,
+  authenticateAdmin
 } from "../utils/auth.js";
 
 const router = express.Router();
@@ -472,7 +473,7 @@ router.put("/:serialNumber", requireAuth, async (req, res) => {
 });
 
 // Create unlinked device (admin only)
-router.post("/admin/create-unlinked", requireAdmin, async (req, res) => {
+router.post("/admin/create-unlinked", authenticateAdmin, async (req, res) => {
   try {
     const { serialNumber, name, source, timezone } = req.body;
 
@@ -655,7 +656,7 @@ router.post(
 );
 
 // Delete device (admin only)
-router.delete("/:serialNumber", requireAdmin, async (req, res) => {
+router.delete("/:serialNumber", authenticateAdmin, async (req, res) => {
   try {
     const Device = (await import("../models/Device.js")).default;
     const device = await Device.findBySerialNumber(req.params.serialNumber);
@@ -678,7 +679,7 @@ router.delete("/:serialNumber", requireAdmin, async (req, res) => {
 });
 
 // Get device statistics (admin only)
-router.get("/admin/stats", requireAdmin, async (req, res) => {
+router.get("/admin/stats", authenticateAdmin, async (req, res) => {
   try {
     // Batch multiple database operations for better performance
     const [stats, deviceCounts, recentDevices] = await Promise.all([
@@ -720,7 +721,7 @@ router.get("/admin/stats", requireAdmin, async (req, res) => {
 });
 
 // Get unlinked devices (admin only)
-router.get("/admin/unlinked", requireAdmin, async (req, res) => {
+router.get("/admin/unlinked", authenticateAdmin, async (req, res) => {
   try {
     const unlinkedDevices = await Device.find({ owner: null })
       .sort({ createdAt: -1 })
@@ -747,7 +748,7 @@ router.get("/admin/unlinked", requireAdmin, async (req, res) => {
 });
 
 // Get all devices (admin only)
-router.get("/admin/all", requireAdmin, async (req, res) => {
+router.get("/admin/all", authenticateAdmin, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 20;

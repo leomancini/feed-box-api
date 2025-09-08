@@ -1,6 +1,11 @@
 import express from "express";
 import Config from "../models/Config.js";
-import { requireAuth, requireAdmin, authenticateToken } from "../utils/auth.js";
+import {
+  requireAuth,
+  requireAdmin,
+  authenticateToken,
+  authenticateAdmin
+} from "../utils/auth.js";
 
 const router = express.Router();
 
@@ -57,8 +62,8 @@ router.get("/key/:key", async (req, res) => {
   }
 });
 
-// Admin routes - require authentication
-router.use(authenticateToken);
+// Admin routes - require admin authentication
+router.use(authenticateAdmin);
 
 // Get all configurations with metadata (admin only)
 router.get("/admin/all", async (req, res) => {

@@ -3,7 +3,8 @@ import jwt from "jsonwebtoken";
 import passport, {
   generateToken,
   requireAuth,
-  authenticateToken
+  authenticateToken,
+  authenticateAdmin
 } from "../utils/auth.js";
 import User from "../models/User.js";
 
@@ -53,7 +54,8 @@ router.get(
         const tokenPayload = {
           userId: req.user.id || req.user._id,
           email: req.user.email,
-          name: req.user.name
+          name: req.user.name,
+          role: req.user.role
         };
 
         console.log("Creating JWT with payload:", tokenPayload);
@@ -181,18 +183,15 @@ router.get("/status", authenticateToken, (req, res) => {
     user: {
       id: req.user.userId,
       email: req.user.email,
-      name: req.user.name
+      name: req.user.name,
+      role: req.user.role
     }
   });
 });
 
 // Get user statistics (admin only)
-router.get("/users/stats", requireAuth, async (req, res) => {
+router.get("/users/stats", authenticateAdmin, async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
-      return res.status(403).json({ error: "Admin access required" });
-    }
-
     const stats = await User.aggregate([
       {
         $group: {

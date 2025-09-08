@@ -149,6 +149,35 @@ export const authenticateToken = (req, res, next) => {
   });
 };
 
+// JWT admin authentication middleware
+export const authenticateAdmin = (req, res, next) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader && authHeader.split(" ")[1]; // Bearer TOKEN
+
+  if (!token) {
+    return res
+      .status(401)
+      .json({ authenticated: false, error: "No token provided" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res
+        .status(401)
+        .json({ authenticated: false, error: "Invalid token" });
+    }
+
+    if (user.role !== "admin") {
+      return res
+        .status(403)
+        .json({ authenticated: false, error: "Admin access required" });
+    }
+
+    req.user = user;
+    next();
+  });
+};
+
 // Middleware to check if user is authenticated (either session or JWT)
 export const requireAuth = async (req, res, next) => {
   // Check JWT first
