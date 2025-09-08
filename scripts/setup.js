@@ -47,16 +47,26 @@ async function setupProject() {
     console.log("   - Create a new project or select existing one");
     console.log("   - Enable Google+ API");
     console.log("   - Create OAuth 2.0 credentials");
+    console.log("   - Add authorized redirect URIs:");
     console.log(
-      "   - Add authorized redirect URI: http://localhost:3115/auth/google/callback"
+      "     • Development: http://localhost:3115/auth/google/callback"
     );
     console.log(
-      "   - Update GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env"
+      "     • Production: https://yourdomain.com/auth/google/callback"
+    );
+    console.log(
+      "   - Update GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and GOOGLE_CALLBACK_URL in .env"
     );
     console.log("");
     console.log("4. 🔐 Update secrets in .env file:");
     console.log("   - SESSION_SECRET: Generate a random string");
     console.log("   - JWT_SECRET: Generate a random string");
+    console.log(
+      "   - API_BASE_URL: Your API base URL (e.g., https://yourdomain.com)"
+    );
+    console.log(
+      "   - GOOGLE_CALLBACK_URL: Optional - Override callback URL (defaults to API_BASE_URL + '/auth/google/callback')"
+    );
     console.log("");
     console.log("5. 🚀 Start the server:");
     console.log("   npm run dev");

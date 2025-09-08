@@ -11,8 +11,7 @@ class Database {
 
   async connect() {
     try {
-      const mongoUri =
-        process.env.MONGODB_URI || "mongodb://localhost:27017/feedbox";
+      const mongoUri = process.env.MONGODB_URI;
 
       this.connection = await mongoose.connect(mongoUri, {
         // Modern MongoDB driver options
