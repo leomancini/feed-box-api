@@ -167,6 +167,6 @@ configSchema.pre("save", function (next) {
   }
 });
 
-const Config = mongoose.model("Config", configSchema);
+const Config = mongoose.model("Config", configSchema, "config");
 
 export default Config;

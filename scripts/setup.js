@@ -58,11 +58,7 @@ async function setupProject() {
     console.log("   - SESSION_SECRET: Generate a random string");
     console.log("   - JWT_SECRET: Generate a random string");
     console.log("");
-    console.log("5. 🔄 Migrate existing data:");
-    console.log("   npm run migrate         # Migrate devices");
-    console.log("   npm run migrate-config  # Migrate configuration");
-    console.log("");
-    console.log("6. 🚀 Start the server:");
+    console.log("5. 🚀 Start the server:");
     console.log("   npm run dev");
     console.log("");
     console.log("🌟 New API endpoints:");

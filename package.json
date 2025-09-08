@@ -7,9 +7,7 @@
   "scripts": {
     "start": "node /home/leo/services/feed-box-api/server.js",
     "dev": "nodemon server.js",
-    "setup": "node scripts/setup.js",
-    "migrate": "node scripts/migrate-devices.js",
-    "migrate-config": "node scripts/migrate-config.js"
+    "setup": "node scripts/setup.js"
   },
   "author": "",
   "license": "ISC",

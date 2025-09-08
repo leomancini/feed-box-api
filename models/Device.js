@@ -10,11 +10,8 @@ const deviceSchema = new mongoose.Schema(
     },
     name: {
       type: String,
-      required: true,
-      trim: true,
-      default: function () {
-        return `Device ${this.serialNumber}`;
-      }
+      required: false,
+      trim: true
     },
     source: {
       type: String,
@@ -29,16 +26,7 @@ const deviceSchema = new mongoose.Schema(
     owner: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true
-    },
-    isActive: {
-      type: Boolean,
-      default: true
-    },
-    // Device metadata
-    lastSeen: {
-      type: Date,
-      default: Date.now
+      required: false // Allow devices to exist without an owner initially
     },
     // Configuration settings
     settings: {
@@ -54,17 +42,6 @@ const deviceSchema = new mongoose.Schema(
         type: Number,
         default: null // Will use source default if null
       }
-    },
-    // Usage statistics
-    stats: {
-      totalRequests: {
-        type: Number,
-        default: 0
-      },
-      lastRequest: {
-        type: Date,
-        default: null
-      }
     }
   },
   {
@@ -76,23 +53,8 @@ const deviceSchema = new mongoose.Schema(
 deviceSchema.index({ serialNumber: 1 }, { unique: true });
 deviceSchema.index({ owner: 1 });
 deviceSchema.index({ source: 1 });
-deviceSchema.index({ isActive: 1 });
-
-// Compound index for owner + active devices
-deviceSchema.index({ owner: 1, isActive: 1 });
 
 // Instance methods
-deviceSchema.methods.updateLastSeen = function () {
-  this.lastSeen = new Date();
-  return this.save();
-};
-
-deviceSchema.methods.incrementRequestCount = function () {
-  this.stats.totalRequests += 1;
-  this.stats.lastRequest = new Date();
-  this.lastSeen = new Date();
-  return this.save();
-};
 
 deviceSchema.methods.updateSource = function (newSource) {
   this.source = newSource;
@@ -112,11 +74,7 @@ deviceSchema.statics.findBySerialNumber = function (serialNumber) {
 };
 
 deviceSchema.statics.findByOwner = function (ownerId) {
-  return this.find({ owner: ownerId, isActive: true }).populate("owner");
-};
-
-deviceSchema.statics.findActiveDevices = function () {
-  return this.find({ isActive: true }).populate("owner");
+  return this.find({ owner: ownerId }).populate("owner");
 };
 
 deviceSchema.statics.getDeviceStats = function () {
@@ -124,8 +82,7 @@ deviceSchema.statics.getDeviceStats = function () {
     {
       $group: {
         _id: "$source",
-        count: { $sum: 1 },
-        totalRequests: { $sum: "$stats.totalRequests" }
+        count: { $sum: 1 }
       }
     },
     { $sort: { count: -1 } }

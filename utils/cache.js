@@ -198,9 +198,6 @@ class AsyncCache extends EventEmitter {
       this.cache.delete(key);
       deletedCount++;
       const parsed = this.parseDeviceKey(key);
-      console.log(
-        `Removed from memory cache: deviceId=${parsed.deviceId}, source=${parsed.source}`
-      );
     }
 
     // Delete the device cache file (all sources for this device are in one file)
@@ -209,7 +206,6 @@ class AsyncCache extends EventEmitter {
       const safeSerial = serialNumber.replace(/[^a-zA-Z0-9\-_]/g, "_");
       const deviceFilePath = path.join(this.cacheDir, `${safeSerial}.json`);
       await fs.unlink(deviceFilePath);
-      console.log(`Deleted device cache file: ${deviceFilePath}`);
       filesDeleted = 1;
     } catch (error) {
       // File might not exist, which is fine
@@ -221,9 +217,6 @@ class AsyncCache extends EventEmitter {
       }
     }
 
-    console.log(
-      `Invalidated ${deletedCount} cache entries and deleted ${filesDeleted} cache files for device ${serialNumber}`
-    );
     return { entriesDeleted: deletedCount, filesDeleted };
   }
 

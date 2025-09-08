@@ -17,11 +17,8 @@ router.get(
   }),
   async (req, res) => {
     try {
-      console.log("OAuth callback - User:", req.user?.email);
-
       // Generate JWT token
       const token = generateToken(req.user);
-      console.log("Generated JWT token");
 
       // Set token as HTTP-only cookie
       res.cookie("token", token, {
@@ -32,11 +29,8 @@ router.get(
         path: "/"
       });
 
-      console.log("Set JWT cookie");
-
       // Redirect to frontend application with success
-      const frontendUrl = process.env.FRONTEND_URL || "/auth/success";
-      console.log("Redirecting to:", frontendUrl);
+      const frontendUrl = process.env.FRONTEND_URL;
       res.redirect(frontendUrl);
     } catch (error) {
       console.error("OAuth callback error:", error);
@@ -163,7 +157,7 @@ router.get("/status", async (req, res) => {
         }
       } catch (error) {
         // JWT invalid, continue to session check
-        console.log("JWT verification failed:", error.message);
+        console.error("JWT verification failed:", error.message);
       }
     }
 
@@ -229,6 +223,39 @@ router.get("/users/stats", requireAuth, async (req, res) => {
   } catch (error) {
     console.error("Get user stats error:", error);
     res.status(500).json({ error: "Failed to fetch user statistics" });
+  }
+});
+
+// Generate test token for development (admin user)
+router.get("/test-token", async (req, res) => {
+  try {
+    // Find an admin user (or create a test one)
+    let adminUser = await User.findOne({ role: "admin" });
+
+    if (!adminUser) {
+      return res.status(404).json({
+        error:
+          "No admin user found. Please create an admin user first via Google OAuth."
+      });
+    }
+
+    // Generate JWT token
+    const token = generateToken(adminUser);
+
+    res.json({
+      message: "Test token generated for development",
+      token: token,
+      user: {
+        id: adminUser._id,
+        name: adminUser.name,
+        email: adminUser.email,
+        role: adminUser.role
+      },
+      usage: `Include this token in your requests: Authorization: Bearer ${token}`
+    });
+  } catch (error) {
+    console.error("Test token generation error:", error);
+    res.status(500).json({ error: "Failed to generate test token" });
   }
 });
 

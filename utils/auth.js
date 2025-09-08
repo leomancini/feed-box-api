@@ -147,7 +147,11 @@ export const requireDeviceOwnership = async (req, res, next) => {
         return res.status(404).json({ error: "Device not found." });
       }
 
-      if (!device.owner.equals(req.user._id) && req.user.role !== "admin") {
+      // Check ownership - handle null owner (unlinked devices)
+      const isOwner = device.owner && device.owner.equals(req.user._id);
+      const isAdmin = req.user.role === "admin";
+
+      if (!isOwner && !isAdmin) {
         return res
           .status(403)
           .json({ error: "Access denied. You do not own this device." });
@@ -156,6 +160,7 @@ export const requireDeviceOwnership = async (req, res, next) => {
       req.device = device;
       next();
     } catch (error) {
+      console.error("Error in requireDeviceOwnership middleware:", error);
       res.status(500).json({ error: "Error checking device ownership." });
     }
   });
