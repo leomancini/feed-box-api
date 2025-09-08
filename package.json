@@ -6,7 +6,10 @@
   "type": "module",
   "scripts": {
     "start": "node /home/leo/services/feed-box-api/server.js",
-    "dev": "nodemon server.js"
+    "dev": "nodemon server.js",
+    "setup": "node scripts/setup.js",
+    "migrate": "node scripts/migrate-devices.js",
+    "migrate-config": "node scripts/migrate-config.js"
   },
   "author": "",
   "license": "ISC",
@@ -14,6 +17,14 @@
     "express": "^4.19.2",
     "path": "^0.12.7",
     "url": "^0.11.3",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "mongoose": "^8.0.0",
+    "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
+    "express-session": "^1.17.3",
+    "dotenv": "^16.3.1",
+    "bcrypt": "^5.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "cors": "^2.8.5"
   }
 }

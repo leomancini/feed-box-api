@@ -5,13 +5,13 @@ import { fetchWikipediaContent } from "../sources/wikipedia.js";
 
 export const sourceHandlers = {
   sample: async () => sampleStrings,
-  headlines: async (req) => await fetchNYTHeadlines(req),
-  sports: async (req) => {
+  headlines: async (deviceTimezone) => await fetchNYTHeadlines(deviceTimezone),
+  sports: async (req, deviceTimezone) => {
     const league = (req.query.league || "mlb").toLowerCase();
-    return await fetchSportsScoreboard(league, req);
+    return await fetchSportsScoreboard(league, deviceTimezone);
   },
-  wikipedia: async (req) => {
+  wikipedia: async (req, deviceTimezone) => {
     const type = (req.query.type || "today-featured-article").toLowerCase();
-    return await fetchWikipediaContent(type, req);
-  },
+    return await fetchWikipediaContent(type, deviceTimezone);
+  }
 };

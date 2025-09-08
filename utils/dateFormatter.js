@@ -1,34 +1,39 @@
 // Central date formatting utility with timezone support
 
-import { readFileSync } from "fs";
-import { fileURLToPath } from "url";
-import { dirname, join } from "path";
+import Config from "../models/Config.js";
 
-// Cache for config to avoid reading file repeatedly
-let configCache = null;
+// Cache for config to avoid reading database repeatedly
+let timezoneCache = null;
+let cacheExpiry = null;
+const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 
 /**
- * Get the configured timezone from config.json
- * @returns {string} The timezone string (e.g., "America/New_York")
+ * Get the configured timezone from the database
+ * @returns {Promise<string>} The timezone string (e.g., "America/New_York")
  */
-function getConfiguredTimezone() {
-  if (!configCache) {
-    try {
-      const __filename = fileURLToPath(import.meta.url);
-      const __dirname = dirname(__filename);
-      const configPath = join(__dirname, "..", "config.json");
-      const configData = readFileSync(configPath, "utf8");
-      configCache = JSON.parse(configData);
-    } catch (error) {
-      console.warn(
-        "Failed to read config.json, using default timezone:",
-        error.message
-      );
-      configCache = { timezone: "America/New_York" }; // Default fallback
-    }
+async function getConfiguredTimezone() {
+  const now = Date.now();
+
+  // Return cached value if still valid
+  if (timezoneCache && cacheExpiry && now < cacheExpiry) {
+    return timezoneCache;
   }
 
-  return configCache.timezone || "America/New_York";
+  try {
+    const config = await Config.getByKey("timezone");
+    timezoneCache = config?.value || "America/New_York";
+    cacheExpiry = now + CACHE_DURATION_MS;
+    return timezoneCache;
+  } catch (error) {
+    console.warn(
+      "Failed to load timezone from database, using default:",
+      error.message
+    );
+    // Use cached value if available, otherwise use default
+    timezoneCache = timezoneCache || "America/New_York";
+    cacheExpiry = now + CACHE_DURATION_MS;
+    return timezoneCache;
+  }
 }
 
 /**
@@ -36,11 +41,14 @@ function getConfiguredTimezone() {
  * @param {Date|string|number} date - The date to format (Date object, ISO string, or timestamp)
  * @param {Object} options - Formatting options
  * @param {boolean} options.includeTime - Whether to include time in the output (default: true)
- * @param {string} options.timezone - Override the configured timezone for this call
- * @returns {string} Formatted date string
+ * @param {string} options.timezone - Timezone to use (if not provided, will query database)
+ * @returns {Promise<string>} Formatted date string
  */
-export function formatDate(date, options = {}) {
-  const { includeTime = true, timezone = getConfiguredTimezone() } = options;
+export async function formatDate(date, options = {}) {
+  const {
+    includeTime = true,
+    timezone = options.timezone || (await getConfiguredTimezone())
+  } = options;
 
   let dateObj;
 
@@ -111,15 +119,17 @@ export function formatDate(date, options = {}) {
 /**
  * Format the current date/time with timezone support
  * @param {Object} options - Formatting options (same as formatDate)
- * @returns {string} Formatted current date string
+ * @param {string} options.timezone - Timezone to use (if not provided, will query database)
+ * @returns {Promise<string>} Formatted current date string
  */
-export function formatNow(options = {}) {
-  return formatDate(new Date(), options);
+export async function formatNow(options = {}) {
+  return await formatDate(new Date(), options);
 }
 
 /**
- * Clear the config cache (useful for testing or config changes)
+ * Clear the timezone cache (useful for testing or config changes)
  */
-export function clearConfigCache() {
-  configCache = null;
+export function clearTimezoneCache() {
+  timezoneCache = null;
+  cacheExpiry = null;
 }

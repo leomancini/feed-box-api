@@ -8,7 +8,10 @@ import { formatDate, formatNow } from "../utils/dateFormatter.js";
  * @param {string} league - League identifier, e.g., "mlb"
  * @returns {Promise<string[]>}
  */
-export async function fetchSportsScoreboard(league = "mlb", req = {}) {
+export async function fetchSportsScoreboard(
+  league = "mlb",
+  deviceTimezone = "UTC"
+) {
   const { sportPath, leaguePath, label } = resolveLeaguePaths(league);
 
   const url = `https://site.api.espn.com/apis/site/v2/sports/${sportPath}/${leaguePath}/scoreboard`;
@@ -22,16 +25,17 @@ export async function fetchSportsScoreboard(league = "mlb", req = {}) {
     const data = await response.json();
     const events = Array.isArray(data?.events) ? data.events : [];
 
-    const lines = events
-      .map((event) => formatEventLine(event, req))
+    const linePromises = events
+      .map(async (event) => await formatEventLine(event, deviceTimezone))
       .filter(Boolean);
+
+    const lines = await Promise.all(linePromises);
 
     // Fallback if no events
     if (lines.length === 0) {
-      const formatOptions = req.deviceTimezone
-        ? { timezone: req.deviceTimezone }
-        : {};
-      const currentDateTime = formatNow(formatOptions);
+      // Always use device timezone for device feeds
+      const formatOptions = { timezone: deviceTimezone };
+      const currentDateTime = await formatNow(formatOptions);
       return [`${currentDateTime} - ${label} - No games found`];
     }
 
@@ -50,7 +54,7 @@ function resolveLeaguePaths(league) {
   }
 }
 
-function formatEventLine(event, req = {}) {
+async function formatEventLine(event, deviceTimezone = "UTC") {
   try {
     const eventName = event?.name || ""; // e.g., "Toronto Blue Jays at New York Yankees"
     const status =
@@ -58,10 +62,9 @@ function formatEventLine(event, req = {}) {
 
     // Use event date instead of current date
     const eventDate = event?.date ? new Date(event.date) : new Date();
-    const formatOptions = req.deviceTimezone
-      ? { timezone: req.deviceTimezone }
-      : {};
-    const eventDateTime = formatDate(eventDate, formatOptions);
+    // Always use device timezone for device feeds
+    const formatOptions = { timezone: deviceTimezone };
+    const eventDateTime = await formatDate(eventDate, formatOptions);
 
     // Extract scores and team details if present
     const comp = Array.isArray(event?.competitions)

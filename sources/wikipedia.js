@@ -10,7 +10,7 @@ import { formatDate } from "../utils/dateFormatter.js";
  */
 export async function fetchWikipediaContent(
   type = "today-featured-article",
-  req = {}
+  deviceTimezone = "UTC"
 ) {
   const { apiPath, label } = resolveContentType(type);
 
@@ -35,7 +35,11 @@ export async function fetchWikipediaContent(
     if (type === "today-featured-article" && data.tfa) {
       // Create the article date from the URL parameters (the featured date)
       const articleDate = new Date(year, month - 1, day);
-      lines = formatFeaturedArticle(data.tfa, articleDate, req);
+      lines = await formatFeaturedArticle(
+        data.tfa,
+        articleDate,
+        deviceTimezone
+      );
     }
 
     // Fallback if no content
@@ -61,19 +65,19 @@ function resolveContentType(type) {
   }
 }
 
-function formatFeaturedArticle(tfa, articleDate, req = {}) {
+async function formatFeaturedArticle(tfa, articleDate, deviceTimezone = "UTC") {
   try {
     const rawTitle = tfa.displaytitle || tfa.title || "Unknown Article";
     // Clean HTML tags and entities from title
     const title = cleanHtmlAndEntities(rawTitle);
     const extract = tfa.extract || "";
 
-    // Format the article date (date only, no time)
-    const formatOptions = { includeTime: false };
-    if (req.deviceTimezone) {
-      formatOptions.timezone = req.deviceTimezone;
-    }
-    const articleDateTime = formatDate(articleDate, formatOptions);
+    // Format the article date (date only, no time) - always use device timezone
+    const formatOptions = {
+      includeTime: false,
+      timezone: deviceTimezone
+    };
+    const articleDateTime = await formatDate(articleDate, formatOptions);
 
     const lines = [];
 
