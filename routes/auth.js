@@ -31,7 +31,7 @@ router.get(
 
       // Redirect to frontend application with success
       const frontendUrl = process.env.FRONTEND_URL;
-      res.redirect(frontendUrl);
+      res.redirect(`${frontendUrl}/auth/success`);
     } catch (error) {
       console.error("OAuth callback error:", error);
       res.redirect("/auth/failure");
