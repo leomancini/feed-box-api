@@ -99,6 +99,15 @@ router.get(
       let config;
       try {
         config = await Config.getGlobalConfig();
+
+        // Verify config has required structure
+        if (
+          !config.screens ||
+          !config.screens.maxCharacters ||
+          !config.screens.maxStrings
+        ) {
+          throw new Error("Config missing required screens properties");
+        }
       } catch (configError) {
         // Fallback to basic error response if config load fails
         return res.status(500).json({
@@ -174,6 +183,15 @@ router.get(
         if (!config) {
           try {
             config = await Config.getGlobalConfig();
+
+            // Verify config has required structure
+            if (
+              !config.screens ||
+              !config.screens.maxCharacters ||
+              !config.screens.maxStrings
+            ) {
+              throw new Error("Config missing required screens properties");
+            }
           } catch (configError) {
             // Fallback to basic error response if config load fails
             return res.status(500).json({
