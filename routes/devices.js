@@ -13,10 +13,29 @@ import {
   optionalAuth
 } from "../utils/auth.js";
 
+// JWT Middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  if (!token) {
+    return res.status(401).json({ authenticated: false, error: 'No token provided' });
+  }
+  
+  const jwt = require('jsonwebtoken');
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(401).json({ authenticated: false, error: 'Invalid token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
 const router = express.Router();
 
 // Get all devices for current user
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", authenticateToken, async (req, res) => {
   try {
     // Use populated devices from auth middleware if available
     let devices;

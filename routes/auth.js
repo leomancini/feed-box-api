@@ -2,6 +2,25 @@ import express from "express";
 import passport, { generateToken, requireAuth } from "../utils/auth.js";
 import User from "../models/User.js";
 
+// JWT Middleware
+const authenticateToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  
+  if (!token) {
+    return res.status(401).json({ authenticated: false, error: 'No token provided' });
+  }
+  
+  const jwt = require('jsonwebtoken');
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) {
+      return res.status(401).json({ authenticated: false, error: 'Invalid token' });
+    }
+    req.user = user;
+    next();
+  });
+};
+
 const router = express.Router();
 
 // Google OAuth routes
@@ -12,29 +31,27 @@ router.get(
 
 router.get(
   "/google/callback",
-  passport.authenticate("google", {
-    failureRedirect: "/auth/failure"
-  }),
-  async (req, res) => {
-    try {
-      // Generate JWT token
-      const token = generateToken(req.user);
-
-      // Set token as HTTP-only cookie
-      res.cookie("token", token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-        path: "/"
-      });
-
-      // Redirect to frontend application with success
+  passport.authenticate("google"),
+  (req, res) => {
+    if (req.user) {
+      // Create JWT token
+      const jwt = require('jsonwebtoken');
+      const token = jwt.sign(
+        { 
+          userId: req.user.id || req.user._id, 
+          email: req.user.email,
+          name: req.user.name 
+        },
+        process.env.JWT_SECRET, // Add this to environment variables
+        { expiresIn: '24h' } // Token expires in 24 hours
+      );
+      
+      // Redirect with token in URL
       const frontendUrl = process.env.FRONTEND_URL;
-      res.redirect(`${frontendUrl}/auth/success`);
-    } catch (error) {
-      console.error("OAuth callback error:", error);
-      res.redirect("/auth/failure");
+      res.redirect(`${frontendUrl}/auth/success?token=${token}`);
+    } else {
+      const frontendUrl = process.env.FRONTEND_URL;
+      res.redirect(`${frontendUrl}/auth/failure?error=authentication_failed`);
     }
   }
 );
@@ -79,7 +96,7 @@ router.get("/me", requireAuth, async (req, res) => {
 });
 
 // Update user profile
-router.put("/me", requireAuth, async (req, res) => {
+router.put("/me", authenticateToken, async (req, res) => {
   try {
     const { name } = req.body;
 
@@ -113,79 +130,22 @@ router.put("/me", requireAuth, async (req, res) => {
 });
 
 // Logout
-router.post("/logout", (req, res) => {
-  // Clear cookie
-  res.clearCookie("token");
-
-  // Logout from session if using session
-  if (req.logout) {
-    req.logout((err) => {
-      if (err) {
-        console.error("Logout error:", err);
-      }
-    });
-  }
-
-  res.json({ message: "Logged out successfully" });
+router.post("/logout", authenticateToken, (req, res) => {
+  // With JWT, logout is handled client-side by removing the token
+  // Optionally, you can maintain a blacklist of tokens here
+  res.json({ success: true, message: 'Logged out successfully' });
 });
 
 // Check authentication status
-router.get("/status", async (req, res) => {
-  try {
-    // Check JWT token first
-    const token =
-      req.header("Authorization")?.replace("Bearer ", "") || req.cookies?.token;
-
-    if (token) {
-      try {
-        const jwt = (await import("jsonwebtoken")).default;
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        const user = await User.findById(decoded.userId).select(
-          "name email role isActive"
-        );
-
-        if (user && user.isActive) {
-          return res.json({
-            authenticated: true,
-            user: {
-              id: user._id,
-              name: user.name,
-              email: user.email,
-              role: user.role
-            }
-          });
-        }
-      } catch (error) {
-        // JWT invalid, continue to session check
-        console.error("JWT verification failed:", error.message);
-      }
+router.get("/status", authenticateToken, (req, res) => {
+  res.json({ 
+    authenticated: true, 
+    user: {
+      id: req.user.userId,
+      email: req.user.email,
+      name: req.user.name
     }
-
-    // Check session authentication
-    if (req.isAuthenticated && req.isAuthenticated() && req.user) {
-      const user = await User.findById(req.user._id).select(
-        "name email role isActive"
-      );
-
-      if (user && user.isActive) {
-        return res.json({
-          authenticated: true,
-          user: {
-            id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role
-          }
-        });
-      }
-    }
-
-    // Not authenticated
-    res.json({ authenticated: false });
-  } catch (error) {
-    console.error("Auth status check error:", error);
-    res.json({ authenticated: false });
-  }
+  });
 });
 
 // Get user statistics (admin only)
