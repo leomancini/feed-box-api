@@ -9,6 +9,21 @@
  * @returns {number} TTL in milliseconds
  */
 export function getSourceTTL(source, config) {
+  // Defensive check for missing config structure
+  if (!config || !config.cache || !config.cache.refreshMinutes) {
+    console.warn(`Missing cache configuration, using default TTL for source: ${source}`);
+    // Default fallback values in minutes
+    const defaultTTL = {
+      'sample': 5,
+      'headlines': 15,
+      'sports': 2,
+      'wikipedia': 60,
+      'default': 10
+    };
+    const ttlMinutes = defaultTTL[source] || defaultTTL.default;
+    return ttlMinutes * 60 * 1000;
+  }
+  
   const ttlMinutes =
     config.cache.refreshMinutes[source] || config.cache.refreshMinutes.default;
   return ttlMinutes * 60 * 1000; // Convert minutes to milliseconds
