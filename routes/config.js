@@ -1,5 +1,6 @@
 import express from "express";
 import Config from "../models/Config.js";
+import { cache } from "../utils/cache.js";
 import {
   requireAuth,
   requireAdmin,
@@ -332,6 +333,73 @@ router.post("/admin/reset", async (req, res) => {
   } catch (error) {
     console.error("Reset config error:", error);
     res.status(500).json({ error: "Failed to reset configuration" });
+  }
+});
+
+// Cache management endpoints (admin only)
+
+// Get cache statistics (admin only)
+router.get("/admin/cache/stats", async (req, res) => {
+  try {
+    const stats = cache.getStats();
+    res.json({
+      message: "Cache statistics retrieved successfully",
+      stats
+    });
+  } catch (error) {
+    console.error("Get cache stats error:", error);
+    res.status(500).json({ error: "Failed to fetch cache statistics" });
+  }
+});
+
+// Clear all cache entries (admin only)
+router.delete("/admin/cache/clear", async (req, res) => {
+  try {
+    const statsBefore = cache.getStats();
+    await cache.clear();
+    
+    res.json({
+      message: "All cache entries cleared successfully",
+      clearedEntries: statsBefore.size
+    });
+  } catch (error) {
+    console.error("Clear cache error:", error);
+    res.status(500).json({ error: "Failed to clear cache" });
+  }
+});
+
+// Clear cache for a specific device (admin only)
+router.delete("/admin/cache/device/:serialNumber", async (req, res) => {
+  try {
+    const { serialNumber } = req.params;
+    const result = await cache.invalidateDevice(serialNumber);
+    
+    res.json({
+      message: `Cache cleared for device ${serialNumber}`,
+      entriesDeleted: result.entriesDeleted,
+      filesDeleted: result.filesDeleted
+    });
+  } catch (error) {
+    console.error("Clear device cache error:", error);
+    res.status(500).json({ error: "Failed to clear device cache" });
+  }
+});
+
+// Clear cache for a specific device and source (admin only)
+router.delete("/admin/cache/device/:serialNumber/source/:source", async (req, res) => {
+  try {
+    const { serialNumber, source } = req.params;
+    const cacheKey = cache.generateDeviceKey(serialNumber, source);
+    const deleted = cache.delete(cacheKey);
+    
+    res.json({
+      message: `Cache cleared for device ${serialNumber} source ${source}`,
+      deleted,
+      key: cacheKey
+    });
+  } catch (error) {
+    console.error("Clear device source cache error:", error);
+    res.status(500).json({ error: "Failed to clear device source cache" });
   }
 });
 

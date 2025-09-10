@@ -483,18 +483,20 @@ class AsyncCache extends EventEmitter {
   }
 }
 
-// Create default cache instance
+// Create default cache instance optimized for performance
 export const cache = new AsyncCache({
   defaultTTL: 5 * 60 * 1000, // 5 minutes
   maxSize: 1000,
-  refreshThreshold: 0.8 // Refresh when 80% of TTL has passed
+  refreshThreshold: 0.8, // Refresh when 80% of TTL has passed
+  persistToFile: false, // Disable file persistence for better performance
+  fileWriteDebounce: 5000 // Increase debounce if file persistence is enabled elsewhere
 });
 
-// Cache middleware factory
+// Simplified cache middleware factory for better performance
 export function createCacheMiddleware(options = {}) {
   const {
     ttl = cache.defaultTTL,
-    keyGenerator = null, // Now required - must provide device-level key
+    keyGenerator = null,
     shouldCache = () => true,
     onCacheHit = () => {},
     onCacheMiss = () => {},
@@ -512,73 +514,63 @@ export function createCacheMiddleware(options = {}) {
     }
 
     const cacheKey = keyGenerator(req);
+    const entry = cache.cache.get(cacheKey);
+    const now = Date.now();
 
-    // Store original res.json to intercept response
-    const originalJson = res.json.bind(res);
-    let responseSent = false;
-
-    // Create refresh function that calls the next middleware/route handler
-    const refreshFunction = () => {
-      return new Promise((resolve, reject) => {
-        // Override res.json to capture the response data
-        res.json = function (data) {
-          if (!responseSent) {
-            resolve(data);
-          }
-          return res;
-        };
-
-        // Call next middleware/route handler
-        next();
-
-        // Set a timeout to handle cases where next() doesn't call res.json
-        setTimeout(() => {
-          if (!responseSent) {
-            reject(
-              new Error("Route handler did not send response within timeout")
-            );
-          }
-        }, 30000); // 30 second timeout
+    // Check for valid cache hit
+    if (entry && now <= entry.expiresAt) {
+      // Cache hit - return immediately
+      res.set({
+        "X-Cache": "HIT",
+        "X-Cache-Age": Math.round((now - entry.createdAt) / 1000),
+        "X-Cache-Stale": "false"
       });
+      
+      onCacheHit(req, { data: entry.data, fromCache: true, age: now - entry.createdAt });
+      return res.json(entry.data);
+    }
+
+    // Cache miss or expired - intercept response to cache result
+    const originalJson = res.json.bind(res);
+    let responseCached = false;
+
+    res.json = function(data) {
+      if (!responseCached) {
+        responseCached = true;
+        
+        // Cache the response data (fire-and-forget)
+        const cacheEntry = {
+          data,
+          createdAt: now,
+          expiresAt: now + ttl,
+          ttl
+        };
+        cache.cache.set(cacheKey, cacheEntry);
+        
+        // Async file save without blocking response
+        if (cache.persistToFile) {
+          cache.saveCacheEntryToFile(cacheKey, cacheEntry).catch(() => {
+            // Ignore file save errors - don't block the response
+          });
+        }
+      }
+
+      // Add cache headers
+      res.set({
+        "X-Cache": "MISS",
+        "X-Cache-Age": "0",
+        "X-Cache-Stale": "false"
+      });
+
+      onCacheMiss(req, { data, fromCache: false, age: 0 });
+      
+      // Restore original json and send response
+      res.json = originalJson;
+      return originalJson(data);
     };
 
-    // Try to get cached data
-    cache
-      .get(cacheKey, refreshFunction, ttl)
-      .then((result) => {
-        if (!responseSent) {
-          responseSent = true;
-
-          // Add cache headers
-          res.set({
-            "X-Cache": result.fromCache ? "HIT" : "MISS",
-            "X-Cache-Age": result.age ? Math.round(result.age / 1000) : 0,
-            "X-Cache-Stale": result.stale ? "true" : "false"
-          });
-
-          if (result.fromCache) {
-            onCacheHit(req, result);
-          } else {
-            onCacheMiss(req, result);
-          }
-
-          // Restore original res.json and send response
-          res.json = originalJson;
-          res.json(result.data);
-        }
-      })
-      .catch((error) => {
-        if (!responseSent) {
-          responseSent = true;
-          onError(error);
-
-          // Restore original res.json
-          res.json = originalJson;
-
-          // Let the error bubble up to Express error handler
-          next(error);
-        }
-      });
+    // Continue to route handler
+    next();
   };
 }
 
