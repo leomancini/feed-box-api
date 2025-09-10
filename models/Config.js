@@ -20,7 +20,7 @@ const configSchema = new mongoose.Schema(
       enum: ["screens", "cache", "general", "sources", "system"],
       default: "general"
     },
-    isActive: {
+    active: {
       type: Boolean,
       default: true
     },
@@ -59,23 +59,23 @@ const configSchema = new mongoose.Schema(
 // Indexes
 configSchema.index({ key: 1 }, { unique: true });
 configSchema.index({ category: 1 });
-configSchema.index({ isActive: 1 });
+configSchema.index({ active: 1 });
 
 // Static methods
 configSchema.statics.getByKey = function (key) {
-  return this.findOne({ key, isActive: true });
+  return this.findOne({ key, active: true });
 };
 
 configSchema.statics.getByCategory = function (category) {
-  return this.find({ category, isActive: true }).sort({ key: 1 });
+  return this.find({ category, active: true }).sort({ key: 1 });
 };
 
 configSchema.statics.getAllActive = function () {
-  return this.find({ isActive: true }).sort({ category: 1, key: 1 });
+  return this.find({ active: true }).sort({ category: 1, key: 1 });
 };
 
 configSchema.statics.getGlobalConfig = async function () {
-  const configs = await this.find({ isActive: true });
+  const configs = await this.find({ active: true });
   const globalConfig = {};
 
   configs.forEach((config) => {
@@ -107,7 +107,7 @@ configSchema.statics.setConfig = async function (key, value, options = {}) {
       ...(category !== undefined && { category }),
       ...(validation !== undefined && { validation }),
       ...(updatedBy !== undefined && { updatedBy }),
-      isActive: true
+      active: true
     },
     {
       upsert: true,

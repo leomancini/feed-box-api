@@ -25,8 +25,8 @@ async function debugConfigCollection() {
     console.log(`✅ Found config:`, oneConfig?.key);
     
     // Test the specific query that's failing
-    console.log("\n3. Testing Config.find({isActive: true})...");
-    const activeConfigs = await Config.find({ isActive: true }).lean();
+    console.log("\n3. Testing Config.find({active: true})...");
+    const activeConfigs = await Config.find({ active: true }).lean();
     console.log(`✅ Found ${activeConfigs.length} active configs`);
     
     // Test getGlobalConfig method

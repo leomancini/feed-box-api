@@ -12,7 +12,7 @@ async function debugConfig() {
     console.log("🔍 Debugging configuration structure...");
     
     // Get all active configs from database
-    const rawConfigs = await Config.find({ isActive: true });
+    const rawConfigs = await Config.find({ active: true });
     console.log("\n📋 Raw configs from database:");
     rawConfigs.forEach(config => {
       console.log(`   ${config.key}: ${JSON.stringify(config.value)}`);

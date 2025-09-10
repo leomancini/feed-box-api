@@ -60,8 +60,37 @@ router.get(
     const serialNumber = req.params.serialNumber;
 
     try {
-      // Load global config from MongoDB
-      const config = await Config.getGlobalConfig();
+      // Load global config from MongoDB with timeout
+      let config;
+      try {
+        config = await Promise.race([
+          Config.getGlobalConfig(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Config load timeout")), 5000)
+          )
+        ]);
+      } catch (configError) {
+        console.warn(
+          `Config load failed for device ${serialNumber}, using defaults:`,
+          configError.message
+        );
+        // Fallback to default config
+        config = {
+          screens: {
+            maxCharacters: 20,
+            maxStrings: 20
+          },
+          cache: {
+            refreshMinutes: {
+              default: 10,
+              sample: 5,
+              headlines: 15,
+              sports: 2,
+              wikipedia: 60
+            }
+          }
+        };
+      }
 
       // Find device configuration in MongoDB
       const device = await Device.findBySerialNumber(serialNumber);
