@@ -8,10 +8,16 @@ function sanitizeText(text) {
 
   return (
     text
-      // Remove or replace various quote marks and apostrophes (expanded)
-      .replace(/[''`‛‚ʹʻʼʽ]/g, "'") // All apostrophe variants to regular apostrophe
-      .replace(/[""‟„‚ʺˮˈˊˋ]/g, '"') // All quote variants to regular quotes
-      .replace(/[«»‹›„‚]/g, '"') // French and other quotes to regular quotes
+      // CONVERT all apostrophe variants to regular ASCII apostrophe (')
+      // This handles ANY unicode apostrophe variant by converting them
+      .replace(/[''`‛‚ʹʻʼʽ′‵ʾʿ]/g, "'") // Convert all apostrophe variants to regular '
+      .replace(/[\u2018\u2019]/g, "'") // Convert left/right single quotes to regular '
+      .replace(/[\u0060\u00B4\u02B9-\u02C1]/g, "'") // Convert grave, acute, modifier letters to '
+      .replace(/[\u2032-\u2037]/g, "'") // Convert prime marks to '
+
+      // Keep regular quotes but clean them
+      .replace(/[""‟„]/g, '"') // Smart double quotes to regular quotes
+      .replace(/[«»‹›]/g, '"') // French quotes to regular quotes
 
       // Replace accented characters with their basic equivalents
       .replace(/[àáâãäå]/g, "a")
