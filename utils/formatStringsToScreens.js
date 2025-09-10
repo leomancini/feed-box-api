@@ -1,4 +1,58 @@
 /**
+ * Sanitize text by removing or replacing special characters that may cause display issues
+ * @param {string} text - Text to sanitize
+ * @returns {string} Cleaned text
+ */
+function sanitizeText(text) {
+  if (!text || typeof text !== "string") return text;
+
+  return (
+    text
+      // Remove or replace various quote marks and apostrophes
+      .replace(/[''`]/g, "'") // Smart quotes to regular apostrophe
+      .replace(/[""]/g, '"') // Smart double quotes to regular quotes
+      .replace(/[«»]/g, '"') // French quotes to regular quotes
+
+      // Replace accented characters with their basic equivalents
+      .replace(/[àáâãäå]/g, "a")
+      .replace(/[èéêë]/g, "e")
+      .replace(/[ìíîï]/g, "i")
+      .replace(/[òóôõö]/g, "o")
+      .replace(/[ùúûü]/g, "u")
+      .replace(/[ýÿ]/g, "y")
+      .replace(/[ñ]/g, "n")
+      .replace(/[ç]/g, "c")
+      .replace(/[ß]/g, "ss")
+      .replace(/[æ]/g, "ae")
+      .replace(/[œ]/g, "oe")
+
+      // Capital versions
+      .replace(/[ÀÁÂÃÄÅ]/g, "A")
+      .replace(/[ÈÉÊË]/g, "E")
+      .replace(/[ÌÍÎÏ]/g, "I")
+      .replace(/[ÒÓÔÕÖ]/g, "O")
+      .replace(/[ÙÚÛÜ]/g, "U")
+      .replace(/[Ý]/g, "Y")
+      .replace(/[Ñ]/g, "N")
+      .replace(/[Ç]/g, "C")
+      .replace(/[Æ]/g, "AE")
+      .replace(/[Œ]/g, "OE")
+
+      // Remove other problematic characters
+      .replace(/[—–]/g, "-") // Em dash and en dash to regular dash
+      .replace(/[…]/g, "...") // Ellipsis to three dots
+      .replace(/[°]/g, " deg") // Degree symbol
+      .replace(/[™®©]/g, "") // Remove trademark, registered, copyright symbols
+      .replace(/[\u00A0]/g, " ") // Non-breaking space to regular space
+      .replace(/[\u2000-\u200F\u2028-\u202F\u205F\u3000]/g, " ") // Various unicode spaces
+
+      // Clean up multiple spaces
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+}
+
+/**
  * Calculate display duration based on character count
  * Formula: Base time + time per character
  * @param {number} characterCount - Total characters in the screen
@@ -19,8 +73,9 @@ function calculateDisplayDuration(characterCount) {
  * @returns {object} Screen object with content and metadata
  */
 function createScreenObject(screenArray) {
-  const content = screenArray;
-  const totalCharacters = screenArray.join("").length;
+  // Ensure all screen lines are sanitized
+  const content = screenArray.map((line) => sanitizeText(line || ""));
+  const totalCharacters = content.join("").length;
   const displayDuration = calculateDisplayDuration(totalCharacters);
 
   return {
@@ -39,8 +94,13 @@ export function formatStringsToScreens(
     return [createScreenObject(["", "", "", ""])];
   }
 
+  // Sanitize all strings first to remove special characters
+  const sanitizedStrings = strings.map((str) => sanitizeText(str));
+
   // Limit the number of strings to process if specified
-  const stringsToProcess = maxStrings ? strings.slice(0, maxStrings) : strings;
+  const stringsToProcess = maxStrings
+    ? sanitizedStrings.slice(0, maxStrings)
+    : sanitizedStrings;
 
   if (!maxCharacters) {
     // No character limit, return strings as single-line screens
